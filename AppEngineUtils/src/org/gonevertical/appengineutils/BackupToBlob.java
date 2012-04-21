@@ -17,10 +17,9 @@ public class BackupToBlob implements DeferredTask {
   private static final Logger log = Logger.getLogger(BackupToBlob.class.getName());
 
   private Date runDate;
-
   private boolean useGoogleStorage;
-
   private String bucketName;
+  private List<String> excludeList;
 
   public BackupToBlob() {
   }
@@ -47,12 +46,28 @@ public class BackupToBlob implements DeferredTask {
     }
   }
 
+  private boolean excludeKind(String kind) {
+    boolean exclude = false;
+    if (excludeList != null || excludeList.isEmpty() == false && excludeList.contains(kind) == true) {
+      exclude = true;
+    }
+    return exclude;
+  }
+
   private void processKind(String kind) {
+    if (excludeKind(kind) == true) {
+      return;
+    }
+    
     WriteKindToBlob task = new  WriteKindToBlob(runDate, kind);
     task.useGoogleStorage(useGoogleStorage, bucketName);
     
     TaskOptions taskOptions = TaskOptions.Builder.withPayload(task);
     Queue queue = QueueFactory.getDefaultQueue();
     queue.add(taskOptions);
+  }
+
+  public void setExcludeKinds(List<String> excludeList) {
+    this.excludeList = excludeList;
   }
 }
