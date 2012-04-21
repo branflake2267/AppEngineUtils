@@ -13,14 +13,26 @@ import com.google.appengine.api.files.FileService;
 import com.google.appengine.api.files.FileServiceFactory;
 import com.google.appengine.api.files.FileWriteChannel;
 import com.google.appengine.api.files.FinalizationException;
+import com.google.appengine.api.files.GSFileOptions;
+import com.google.appengine.api.files.GSFileOptions.GSFileOptionsBuilder;
 import com.google.appengine.api.files.LockException;
 
 public class Blobber {
 
-  public FileService fileService = FileServiceFactory.getFileService();;
+  public FileService fileService = FileServiceFactory.getFileService();
 
-  public AppEngineFile create(String name) throws IOException {
+  public AppEngineFile createBlob(String name) throws IOException {
     AppEngineFile file = fileService.createNewBlobFile("text/plain", name);
+    return file;
+  }
+  
+  public AppEngineFile createGoogleStorage(String bucketName, String name) throws IOException {
+    GSFileOptionsBuilder optionsBuilder = new GSFileOptionsBuilder()
+      .setBucket(bucketName)
+      .setKey(name)
+      .setMimeType("text/plain");
+
+    AppEngineFile file = fileService.createNewGSFile(optionsBuilder.build());
     return file;
   }
 

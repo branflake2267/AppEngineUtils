@@ -12,13 +12,22 @@ import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
 
-public class Backup implements DeferredTask {
+public class BackupToBlob implements DeferredTask {
   
-  private static final Logger log = Logger.getLogger(Backup.class.getName());
+  private static final Logger log = Logger.getLogger(BackupToBlob.class.getName());
 
   private Date runDate;
 
-  public Backup() {
+  private boolean useGoogleStorage;
+
+  private String bucketName;
+
+  public BackupToBlob() {
+  }
+  
+  public void setUseGoogleStorage(boolean useGoogleStorage, String bucketName) {
+    this.useGoogleStorage = useGoogleStorage;
+    this.bucketName = bucketName;
   }
   
   @Override
@@ -40,6 +49,7 @@ public class Backup implements DeferredTask {
 
   private void processKind(String kind) {
     WriteKindToBlob task = new  WriteKindToBlob(runDate, kind);
+    task.useGoogleStorage(useGoogleStorage, bucketName);
     
     TaskOptions taskOptions = TaskOptions.Builder.withPayload(task);
     Queue queue = QueueFactory.getDefaultQueue();

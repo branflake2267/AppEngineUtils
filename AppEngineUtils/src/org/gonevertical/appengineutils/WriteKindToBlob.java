@@ -25,9 +25,9 @@ import com.google.appengine.api.files.LockException;
 import com.google.appengine.api.taskqueue.DeferredTask;
 
 public class WriteKindToBlob implements DeferredTask {
-  
+
   private static final Logger log = Logger.getLogger(WriteKindToBlob.class.getName());
-  
+
   private int limit = 100;
   private boolean hasData = true;
   private String kind;
@@ -35,30 +35,21 @@ public class WriteKindToBlob implements DeferredTask {
   private DatastoreService datastore;
   private FileWriteChannel writeChannel;
   private Date runDate;
-
   private Blobber blobber;
-  
+  private boolean useGoogleStorage;
+  private String bucketName;
+
   public WriteKindToBlob(Date runDate, String kind) {
     this.runDate = runDate;
     this.kind = kind;
   }
-  
+
   @Override
   public void run() {
-    String filename = FileNamingUtil.getFileName(kind, runDate);
-    
-    log.info("WriteKindToBlob task filename=" + filename);
-    
     blobber = new Blobber();
-    
-    AppEngineFile file = null;
-    try {
-      file = blobber.create(filename);
-    } catch (IOException e) {
-      e.printStackTrace();
-      log.log(Level.SEVERE, "", e);
-    }
-    
+
+    AppEngineFile file = createFile();
+
     try {
       writeChannel = blobber.open(file);
     } catch (FileNotFoundException e) {
@@ -74,13 +65,13 @@ public class WriteKindToBlob implements DeferredTask {
       e.printStackTrace();
       log.log(Level.SEVERE, "", e);
     }
-    
+
     datastore = DatastoreServiceFactory.getDatastoreService();
 
     do {
       query();
     } while (hasData);
-    
+
     try {
       blobber.close(writeChannel);
     } catch (IllegalStateException e) {
@@ -91,34 +82,70 @@ public class WriteKindToBlob implements DeferredTask {
       log.log(Level.SEVERE, "", e);
     }
   }
-  
+
+  private AppEngineFile createFile() {
+    AppEngineFile file = null;
+    if (useGoogleStorage == true) {
+      file = createGoogleStorageFile();
+    } else {
+      file = createBlob();
+    }
+    return file;
+  }
+
+  private AppEngineFile createBlob() {
+    String filename = FileNamingUtil.getFileName(kind, runDate);
+
+    AppEngineFile file = null;
+    try {
+      file = blobber.createBlob(filename);
+    } catch (IOException e) {
+      e.printStackTrace();
+      log.log(Level.SEVERE, "", e);
+    }
+    return file;
+  }
+
+  private AppEngineFile createGoogleStorageFile() {
+    String filename = FileNamingUtil.getFileName(kind, runDate);
+
+    AppEngineFile file = null;
+    try {
+      file = blobber.createGoogleStorage(bucketName, filename);
+    } catch (IOException e) {
+      e.printStackTrace();
+      log.log(Level.SEVERE, "", e);
+    }
+    return file;
+  }
+
   private void query() {
     Query q = new Query(kind);
     PreparedQuery pq = datastore.prepare(q);
     FetchOptions options = FetchOptions.Builder.withLimit(limit);
-    
+
     if (startCursor != null) {
       options.startCursor(startCursor);
     }
-    
+
     QueryResultList<Entity> results = pq.asQueryResultList(options);
     if (results == null || results.isEmpty()) {
       hasData = false;
       return;
     }
-    
+
     for (Entity entity : results) {
       write(entity);
     }
-    
+
     startCursor = results.getCursor();
   }
 
   private void write(Entity entity) {
     String serialized = GsonUtils.convertObjectToString(entity);
-    
+
     log.info("serialized=" + serialized);
-    
+
     try {
       blobber.write(writeChannel, serialized);
     } catch (IOException e) {
@@ -126,5 +153,10 @@ public class WriteKindToBlob implements DeferredTask {
       log.log(Level.SEVERE, "", e);
     }
   }
-  
+
+  public void useGoogleStorage(boolean useGoogleStorage, String bucketName) {
+    this.useGoogleStorage = useGoogleStorage;
+    this.bucketName = bucketName;
+  }
+
 }
