@@ -4,7 +4,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.gonevertical.appengineutils.util.Blobber;
 import org.gonevertical.appengineutils.util.KindUtils;
 
 import com.google.appengine.api.taskqueue.DeferredTask;
@@ -48,7 +47,7 @@ public class BackupToBlob implements DeferredTask {
 
   private boolean excludeKind(String kind) {
     boolean exclude = false;
-    if (excludeList != null || excludeList.isEmpty() == false && excludeList.contains(kind) == true) {
+    if ((excludeList != null && excludeList.isEmpty() == false) && excludeList.contains(kind) == true) {
       exclude = true;
     }
     return exclude;

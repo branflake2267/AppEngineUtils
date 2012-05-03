@@ -141,9 +141,13 @@ public class WriteKindToBlob implements DeferredTask {
     startCursor = results.getCursor();
   }
 
+  /**
+   * EntityTranslator can be used to save types
+   * @param entity
+   */
   private void write(Entity entity) {
     String serialized = GsonUtils.convertObjectToString(entity);
-
+    
     log.info("serialized=" + serialized);
 
     try {
