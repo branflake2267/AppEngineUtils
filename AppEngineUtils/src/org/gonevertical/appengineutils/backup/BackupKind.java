@@ -1,4 +1,4 @@
-package org.gonevertical.appengineutils.backkup;
+package org.gonevertical.appengineutils.backup;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.gonevertical.appengineutils.backkup.BackupKind;
 import org.gonevertical.appengineutils.util.Blobber;
 import org.gonevertical.appengineutils.util.FileNamingUtil;
 import org.gonevertical.appengineutils.util.GsonUtils;

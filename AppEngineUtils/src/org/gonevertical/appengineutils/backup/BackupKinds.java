@@ -1,9 +1,11 @@
-package org.gonevertical.appengineutils.backkup;
+package org.gonevertical.appengineutils.backup;
 
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
+import org.gonevertical.appengineutils.backkup.BackupKind;
+import org.gonevertical.appengineutils.backkup.BackupKinds;
 import org.gonevertical.appengineutils.util.KindUtils;
 
 import com.google.appengine.api.taskqueue.DeferredTask;
