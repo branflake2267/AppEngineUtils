@@ -1,4 +1,4 @@
-package org.gonevertical.appengineutils;
+package org.gonevertical.appengineutils.backkup;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -24,9 +24,9 @@ import com.google.appengine.api.files.FinalizationException;
 import com.google.appengine.api.files.LockException;
 import com.google.appengine.api.taskqueue.DeferredTask;
 
-public class WriteKindToBlob implements DeferredTask {
+public class BackupKind implements DeferredTask {
 
-  private static final Logger log = Logger.getLogger(WriteKindToBlob.class.getName());
+  private static final Logger log = Logger.getLogger(BackupKind.class.getName());
 
   private int limit = 100;
   private boolean hasData = true;
@@ -39,7 +39,7 @@ public class WriteKindToBlob implements DeferredTask {
   private boolean useGoogleStorage;
   private String bucketName;
 
-  public WriteKindToBlob(Date runDate, String kind) {
+  public BackupKind(Date runDate, String kind) {
     this.runDate = runDate;
     this.kind = kind;
   }

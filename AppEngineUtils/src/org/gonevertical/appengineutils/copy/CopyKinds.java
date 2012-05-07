@@ -1,45 +1,59 @@
-package org.gonevertical.appengineutils;
+package org.gonevertical.appengineutils.copy;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.gonevertical.appengineutils.util.KindUtils;
+import org.gonevertical.appengineutils.util.AppEngineRemoteUtils;
 
 import com.google.appengine.api.taskqueue.DeferredTask;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
 
-public class BackupToBlob implements DeferredTask {
-  
-  private static final Logger log = Logger.getLogger(BackupToBlob.class.getName());
+public class CopyKinds implements DeferredTask {
+
+  private static final Logger log = Logger.getLogger(CopyKinds.class.getName());
 
   private Date runDate;
-  private boolean useGoogleStorage;
-  private String bucketName;
   private List<String> excludeList;
+  private String appIdFull;
+  private String remoteUserName;
+  private String remotePassword;
 
-  public BackupToBlob() {
+  private AppEngineRemoteUtils remoteUtils;
+
+  public CopyKinds(String remoteUserName, String remotePassword, String appIdFull) {
+    this.appIdFull = appIdFull;
+    this.remoteUserName = remoteUserName;
+    this.remotePassword = remotePassword; 
   }
-  
-  public void setUseGoogleStorage(boolean useGoogleStorage, String bucketName) {
-    this.useGoogleStorage = useGoogleStorage;
-    this.bucketName = bucketName;
+
+  private void loginAppEngine() throws IOException {
+    remoteUtils = AppEngineRemoteUtils.newInstance(remoteUserName, remotePassword, appIdFull);
   }
-  
+
   @Override
   public void run() {
     runDate = new Date();
-    
-    log.info("Backup task running. runDate=" + runDate.toGMTString());
-    
+
+    log.info("Copy task running. runDate=" + runDate.toGMTString());
+
+    try {
+      loginAppEngine();
+    } catch (IOException e) {
+      e.printStackTrace();
+      return;
+    }
+
     loopKinds();
   }
 
   private void loopKinds() {
-    List<String> kinds = KindUtils.getKinds(false);
-    
+    ArrayList<String> kinds = remoteUtils.getKinds(false);
+
     for (String kind : kinds) {
       processKind(kind);
     }
@@ -57,10 +71,9 @@ public class BackupToBlob implements DeferredTask {
     if (excludeKind(kind) == true) {
       return;
     }
-    
-    WriteKindToBlob task = new  WriteKindToBlob(runDate, kind);
-    task.useGoogleStorage(useGoogleStorage, bucketName);
-    
+
+    CopyKind task = new  CopyKind(remoteUserName, remotePassword, appIdFull, runDate, kind);
+
     TaskOptions taskOptions = TaskOptions.Builder.withPayload(task);
     Queue queue = QueueFactory.getDefaultQueue();
     queue.add(taskOptions);

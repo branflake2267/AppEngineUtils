@@ -1,0 +1,28 @@
+#surefire
+#Sat Apr 21 16:12:49 PDT 2012
+testClassesDirectory=/Users/branflake2267/git/AppEngineUtils/AppEngineUtils/target/test-classes
+classPathUrl.3=/Users/branflake2267/.m2/repository/com/google/collections/google-collections/1.0/google-collections-1.0.jar
+classPathUrl.2=/Users/branflake2267/.m2/repository/com/google/code/gson/gson/2.1/gson-2.1.jar
+useManifestOnlyJar=true
+classPathUrl.1=/Users/branflake2267/git/AppEngineUtils/AppEngineUtils/target/classes
+reportsDirectory=/Users/branflake2267/git/AppEngineUtils/AppEngineUtils/target/surefire-reports
+classPathUrl.0=/Users/branflake2267/git/AppEngineUtils/AppEngineUtils/target/test-classes
+dirscanner.0=directoryScannerOptions
+providerConfiguration=org.apache.maven.surefire.junit.JUnit3Provider
+testSuiteDefinitionTestSourceDirectory=/Users/branflake2267/git/AppEngineUtils/AppEngineUtils/src/test/java
+surefireClassPathUrl.1=/Users/branflake2267/.m2/repository/org/apache/maven/surefire/surefire-api/2.7.1/surefire-api-2.7.1.jar
+surefireClassPathUrl.0=/Users/branflake2267/.m2/repository/org/apache/maven/surefire/surefire-junit3/2.7.1/surefire-junit3-2.7.1.jar
+report.2=org.apache.maven.surefire.report.XMLReporter
+useSystemClassLoader=true
+report.1=org.apache.maven.surefire.report.BriefFileReporter
+report.0=org.apache.maven.surefire.report.ForkingConsoleReporter
+excludes0=**/*$*
+isTrimStackTrace=true
+dirscanner.0.params=/Users/branflake2267/git/AppEngineUtils/AppEngineUtils/target/test-classes|[**/Test*.java, **/*Test.java, **/*TestCase.java]|[**/*$*]
+enableAssertions=true
+includes2=**/*TestCase.java
+failIfNoTests=false
+includes1=**/*Test.java
+dirscanner.0.types=java.io.File|java.util.ArrayList|java.util.ArrayList
+includes0=**/Test*.java
+childDelegation=false
