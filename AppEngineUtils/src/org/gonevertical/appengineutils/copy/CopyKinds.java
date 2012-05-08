@@ -52,7 +52,14 @@ public class CopyKinds implements DeferredTask {
   }
 
   private void loopKinds() {
-    ArrayList<String> kinds = remoteUtils.getKinds(false);
+    List<String> kinds;
+    try {
+      kinds = remoteUtils.getKinds(false);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return;
+    }
+
 
     for (String kind : kinds) {
       processKind(kind);
@@ -72,11 +79,12 @@ public class CopyKinds implements DeferredTask {
       return;
     }
 
-    CopyKind task = new  CopyKind(remoteUserName, remotePassword, appIdFull, runDate, kind);
-
+    CopyKind task = new CopyKind(remoteUserName, remotePassword, appIdFull, kind);
     TaskOptions taskOptions = TaskOptions.Builder.withPayload(task);
     Queue queue = QueueFactory.getDefaultQueue();
     queue.add(taskOptions);
+    
+    task.run();
   }
 
   public void setExcludeKinds(List<String> excludeList) {

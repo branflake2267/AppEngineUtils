@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.gonevertical.appengineutils.util.AppEngineRemoteUtils;
+import org.gonevertical.appengineutils.util.EntityStat;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.DatastoreAttributes;
@@ -32,120 +33,119 @@ public class CopyKind implements DeferredTask {
   private static final Logger log = Logger.getLogger(CopyKind.class.getName());
 
   private int limit = 100;
-  private boolean hasData = true;
   private String kind;
-  private Cursor startCursor;
-  private Date runDate;
-
   private String appIdFull;
   private String remoteUserName;
   private String remotePassword;
-
-  private AppEngineRemoteUtils remoteUtils;
-
   private String appKey;
+  private AppEngineRemoteUtils remoteUtils;
+  private DatastoreService localDataStore;
 
-  public CopyKind(String remoteUserName, String remotePassword, String appIdFull, Date runDate, String kind) {
+  public CopyKind(String remoteUserName, String remotePassword, String appIdFull, String kind) {
     this.appIdFull = appIdFull;
     this.remoteUserName = remoteUserName;
     this.remotePassword = remotePassword; 
-    this.runDate = runDate;
     this.kind = kind;
   }
-
+  
   private void loginAppEngine() throws IOException {
     remoteUtils = AppEngineRemoteUtils.newInstance(remoteUserName, remotePassword, appIdFull);
   }
 
   @Override
   public void run() {
-    appKey = getApp();
-
+    localDataStore = DatastoreServiceFactory.getDatastoreService();
+    
+    appKey = getAppKey();
+    
     try {
       loginAppEngine();
     } catch (IOException e) {
       e.printStackTrace();
       return;
     }
+    
+    EntityStat stat = null;
+    try {
+      stat = remoteUtils.getStat(kind);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return;
+    }
+    
+    if (stat.getCount() == 0) {
+      return;
+    }
 
+    int offset = 0;
     do {
       try {
-        query();
+        query(offset, limit);
       } catch (IOException e) {
         e.printStackTrace();
         return;
       }
-    } while (hasData);
+      offset = offset + limit;
+    } while (offset <= stat.getCount());
   }
 
-  private String getApp() {
+  /**
+   * create a entity so we can use EntityTranslater proto to get the app name from the key
+   * @return
+   */
+  private String getAppKey() {
     Entity entity = new Entity("TestEntity", 1);
-    
-    DatastoreService localDataStore = DatastoreServiceFactory.getDatastoreService();
     localDataStore.put(entity);
     
     EntityProto proto = EntityTranslator.convertToPb(entity);
-    
     String app = proto.getKey().getApp();
-    
     return app;
   }
 
-  private void query() throws IOException {
-    RemoteApiInstaller datastoreAccess = null;
+  private void query(int offset, int limit) throws IOException {
+    System.out.println("offset=" + offset + " limit=" + limit + " kind=" + kind);
+    
+    RemoteApiInstaller installer = null;
     try {
-      datastoreAccess = remoteUtils.open();
-    } catch (IOException e1) {
-      e1.printStackTrace();
+      installer = remoteUtils.open();
+    } catch (IOException e) {
+      e.printStackTrace();
       return;
     }
 
     DatastoreService remoteDataStore = DatastoreServiceFactory.getDatastoreService();
-    Query q = new Query(kind);
-    PreparedQuery pq = remoteDataStore.prepare(q);
-    FetchOptions options = FetchOptions.Builder.withLimit(limit);
+    FetchOptions options = FetchOptions.Builder.withOffset(offset).limit(limit);
+    List<Entity> entities = remoteDataStore.prepare(new Query(kind)).asList(options);
 
-    if (startCursor != null) {
-      options.startCursor(startCursor);
-    }
+    remoteUtils.close(installer);
 
-    QueryResultList<Entity> results = pq.asQueryResultList(options);
-    if (results == null || results.isEmpty()) {
-      hasData = false;
+    // Lets just make sure the remote was closed properly.
+    // Remote won't close if its iterable query, b/c of the async
+    if (testIsLocal() == false) {
       return;
     }
-
-    List<Entity> entities = new ArrayList<Entity>();
-    for (Entity entity : results) {
-      entities.add(entity);
-    }
-    startCursor = results.getCursor();
-
-    remoteUtils.close(datastoreAccess);
-
-    writeList(entities);
+    
+    putEntities(entities);
   }
 
   /**
    * This will put remote Entities into local dev datastore local_db.bin
    */
-  private void writeList(List<Entity> entities) {
-    DatastoreService localDataStore = DatastoreServiceFactory.getDatastoreService();
-
+  private void putEntities(List<Entity> entities) {
     for (Entity entity : entities) {
-      putEntity(localDataStore, entity);
+      putEntity(entity);
     }
   }
 
-  private void putEntity(DatastoreService localDataStore, Entity remoteEntity) {
-    EntityProto proto = EntityTranslator.convertToPb(remoteEntity);
+  private void putEntity(Entity remoteEntity) {
+    EntityProto remoteProto = EntityTranslator.convertToPb(remoteEntity);
     
     // This is key to copying the entity!
-    Reference x = proto.getKey();
-    x.setApp(appKey);
-    proto.setKey(x);
+    Reference refKey = remoteProto.getKey();
+    refKey.setApp(appKey);
+    remoteProto.setKey(refKey);
     
-    Entity localEntity = EntityTranslator.createFromPb(proto);
+    Entity localEntity = EntityTranslator.createFromPb(remoteProto);
     
     Transaction txn = localDataStore.beginTransaction();
     try {
@@ -155,8 +155,35 @@ public class CopyKind implements DeferredTask {
       e.printStackTrace();
     }
     
-    log.info("putEntity() localEntity=" + localEntity);
+    //log.info("putEntity() localEntity=" + localEntity);
     System.out.println("putEntity() localEntity=" + localEntity);
+  }
+
+  /**
+   * Be sure the localDataStore is local and not remote
+   * This will happen if the remote is not closed/uninstalled
+   * 
+   * @return
+   */
+  private boolean testIsLocal() {
+    Entity entity = new Entity("TestEntity", 1);
+    
+    try {
+      entity = localDataStore.get(entity.getKey());
+    } catch (EntityNotFoundException e) {
+      e.printStackTrace();
+      return false;
+    }
+    
+    EntityProto proto = EntityTranslator.convertToPb(entity);
+    String appKey = proto.getKey().getApp();
+    
+    boolean islocal = false;
+    if (this.appKey.equals(appKey) == true) {
+      islocal = true;
+    }
+    
+    return islocal;
   }
 
 }

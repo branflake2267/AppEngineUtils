@@ -3,6 +3,7 @@ package org.gonevertical.appengineutils.util;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Logger;
 
 import com.google.appengine.api.datastore.BaseDatastoreService;
@@ -18,61 +19,6 @@ public class AppEngineRemoteUtils {
 
   private static final Logger log = Logger.getLogger(AppEngineRemoteUtils.class.getName());
 
-  private RemoteApiOptions options;
-
-  /**
-   * use newInstance();
-   */
-  private AppEngineRemoteUtils() {
-  }
-
-  public RemoteApiInstaller open() throws IOException {
-    RemoteApiInstaller datastoreAccess = new RemoteApiInstaller();
-    datastoreAccess.install(options);
-    return datastoreAccess;
-  }
-
-  public void close(RemoteApiInstaller datastoreAccess) {
-    datastoreAccess.uninstall();
-  }
-
-  protected RemoteApiOptions getRemoteApiOptions() {
-    return options;
-  }
-
-  /**
-   * sandbox
-   */
-  public  ArrayList<String> test() {
-    RemoteApiInstaller datastoreAccess = null;
-    try {
-      datastoreAccess = open();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    if (datastoreAccess == null) {
-      return null;
-    }
-    ArrayList<String> r = null;
-    DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
-    try {
-      Query q = new Query("__Stat_Kind__");
-      Iterable<Entity> itr = ds.prepare(q).asIterable();
-      for (Entity e : itr) {
-        if (r == null) {
-          r = new ArrayList<String>();
-        }
-        log.info("e=" + e);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      //log.error("error", e); 
-    } finally {
-      close(datastoreAccess);
-    }
-    return r;
-  }
-
   /**
    * set Login options
    * 
@@ -85,17 +31,21 @@ public class AppEngineRemoteUtils {
     return utils;
   }
 
+  private RemoteApiOptions options;
+
+  /**
+   * use newInstance();
+   */
+  private AppEngineRemoteUtils() {
+  }
+
   public void setup(String username, String password, String appid) throws IOException {
-    // Authenticating with username and password is slow, so we'll do it
-    // once during construction and then store the credentials for reuse.
     this.options = new RemoteApiOptions()
-    .server(appid, 443)
-    .credentials(username, password);
+      .server(appid, 443)
+      .credentials(username, password);
     RemoteApiInstaller installer = new RemoteApiInstaller();
     installer.install(options);
     try {
-      // Update the options with reusable credentials so we can skip
-      // authentication on subsequent calls.
       options.reuseCredentials(username, installer.serializeCredentials());
     } finally {
       installer.uninstall();
@@ -104,14 +54,31 @@ public class AppEngineRemoteUtils {
     log.info("AppEngineRemoteUtils.setup(): app engine instance ready...");
   }
 
-  public void putInRemoteDatastore(Entity entity) throws IOException {
+  public RemoteApiInstaller open() throws IOException {
     RemoteApiInstaller installer = new RemoteApiInstaller();
-    installer.install(options);
+    try {
+      installer.install(options);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return installer;
+  }
+
+  public void close(RemoteApiInstaller installer) {
+    installer.uninstall();    
+  }
+
+  protected RemoteApiOptions getRemoteApiOptions() {
+    return options;
+  }
+
+  public void put(Entity entity) throws IOException {
+    RemoteApiInstaller installer = open();
     try {
       DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
       System.out.println("Key of new entity is " + ds.put(entity));
     } finally {
-      installer.uninstall();
+      close(installer);
     }
   }
 
@@ -122,17 +89,10 @@ public class AppEngineRemoteUtils {
    * 
    * @param withSystemKinds include system kinds like __Stat_Total__
    * @return
+   * @throws IOException 
    */
-  public ArrayList<String> getKinds(boolean withSystemKinds) {
-    RemoteApiInstaller datastoreAccess = null;
-    try {
-      datastoreAccess = open();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    if (datastoreAccess == null) {
-      return null;
-    }
+  public List<String> getKinds(boolean withSystemKinds) throws IOException {
+    RemoteApiInstaller installer = open();
     ArrayList<String> r = null;
     DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
     try {
@@ -154,13 +114,13 @@ public class AppEngineRemoteUtils {
       e.printStackTrace();
       //log.error("getKinds error. withSystemKinds=" + withSystemKinds, e);
     } finally {
-      close(datastoreAccess);
+      close(installer);
     }
     return r;
   }
 
   /**
-   * is Entity kind a system kind?
+   * Is Entity kind a system kind?
    * 
    * @param kind
    * @return
@@ -180,17 +140,11 @@ public class AppEngineRemoteUtils {
 
   /**
    * Get All entities total
+   * 
+   * @throws IOException 
    */
-  public EntityStat getStatGlobal() {
-    RemoteApiInstaller datastoreAccess = null;
-    try {
-      datastoreAccess = open();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    if (datastoreAccess == null) {
-      return null;
-    }
+  public EntityStat getStatGlobal() throws IOException {
+    RemoteApiInstaller installer = open();
     EntityStat es = null;
     DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
     try {
@@ -210,25 +164,19 @@ public class AppEngineRemoteUtils {
       e.printStackTrace();
       //log.error("getStatGlobal error", e);
     } finally {
-      close(datastoreAccess);
+      close(installer);
     }
     return es;
   }
 
   /**
-   * get all the entity stats
+   * Get all the entity stats
+   * 
    * @return
+   * @throws IOException 
    */
-  public ArrayList<EntityStat> getStats() {
-    RemoteApiInstaller datastoreAccess = null;
-    try {
-      datastoreAccess = open();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    if (datastoreAccess == null) {
-      return null;
-    }
+  public List<EntityStat> getStats() throws IOException {
+    RemoteApiInstaller installer = open();
     ArrayList<EntityStat> r = null;
     DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
     try {
@@ -245,21 +193,13 @@ public class AppEngineRemoteUtils {
       e.printStackTrace();
       //log.error("getStats error", e);
     } finally {
-      close(datastoreAccess);
+      close(installer);
     }
     return r;
   }
 
-  public EntityStat getStat(String kind) {
-    RemoteApiInstaller datastoreAccess = null;
-    try {
-      datastoreAccess = open();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    if (datastoreAccess == null) {
-      return null;
-    }
+  public EntityStat getStat(String kind) throws IOException {
+    RemoteApiInstaller installer = open();
     EntityStat r = null;
     DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
     try {
@@ -273,13 +213,30 @@ public class AppEngineRemoteUtils {
       e.printStackTrace();
       //log.error("getStat error for kind=" + kind, e);
     } finally {
-      close(datastoreAccess);
+      close(installer);
     }
     return r;
   }
 
-  public DatastoreService getDataStore() {
-    return DatastoreServiceFactory.getDatastoreService();
+  public List<String> test() throws IOException {
+    RemoteApiInstaller installer = open();
+    ArrayList<String> r = null;
+    DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
+    try {
+      Query q = new Query("__Stat_Kind__");
+      Iterable<Entity> itr = ds.prepare(q).asIterable();
+      for (Entity e : itr) {
+        if (r == null) {
+          r = new ArrayList<String>();
+        }
+        log.info("e=" + e);
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      //log.error("error", e); 
+    } finally {
+      close(installer);
+    }
+    return r;
   }
-
 }
