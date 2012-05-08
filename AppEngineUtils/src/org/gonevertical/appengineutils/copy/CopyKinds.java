@@ -60,9 +60,8 @@ public class CopyKinds implements DeferredTask {
       return;
     }
 
-
     for (String kind : kinds) {
-      processKind(kind);
+      processKind(kind);      
     }
   }
 
@@ -83,8 +82,6 @@ public class CopyKinds implements DeferredTask {
     TaskOptions taskOptions = TaskOptions.Builder.withPayload(task);
     Queue queue = QueueFactory.getDefaultQueue();
     queue.add(taskOptions);
-    
-    task.run();
   }
 
   public void setExcludeKinds(List<String> excludeList) {
